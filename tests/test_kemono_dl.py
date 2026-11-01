@@ -56,6 +56,25 @@ def test_get_creator_posts(mock_get, kemono_dl: KemonoDL) -> None:
 
 
 @patch("kemono_dl.session.requests.Session.get")
+def test_get_creator_posts_with_search_query(mock_get, kemono_dl: KemonoDL) -> None:
+    mock_get.return_value = Mock(json=lambda: [])
+
+    post_ids = kemono_dl.get_creator_post_ids(
+        KemonoDL.PAWCHIVE_DOMAIN,
+        "fanbox",
+        "73132618",
+        search_query="becky",
+    )
+
+    assert post_ids == []
+    mock_get.assert_called_once_with(
+        KemonoDL.PAWCHIVE_DOMAIN + "/api/v1/fanbox/user/73132618/posts",
+        params={"o": 0, "q": "becky"},
+        headers={"accept": "text/css"},
+    )
+
+
+@patch("kemono_dl.session.requests.Session.get")
 def test_get_post(mock_get, kemono_dl: KemonoDL) -> None:
     with open(f"{TEST_DATA_PATH}/post.json", encoding="utf-8") as f:
         mock_data = json.load(f)
@@ -109,6 +128,18 @@ def test_parse_url_match_creator(kemono_dl: KemonoDL):
 def test_parse_url_match_post(kemono_dl: KemonoDL):
     expected = {"site": "coomer", "service": "SERVICE_123", "creator_id": "USER_123", "post_id": "POST_123"}
     result = kemono_dl.parse_url("https://coomer.st/SERVICE_123/user/USER_123/post/POST_123")
+    assert result == expected
+
+
+def test_parse_url_match_creator_with_search_query(kemono_dl: KemonoDL):
+    expected = {
+        "site": "pawchive",
+        "service": "fanbox",
+        "creator_id": "73132618",
+        "post_id": None,
+        "search_query": "becky",
+    }
+    result = kemono_dl.parse_url("https://pawchive.pw/fanbox/user/73132618?q=becky")
     assert result == expected
 
 

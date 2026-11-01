@@ -7,6 +7,7 @@ import re
 import time
 from http.cookiejar import LoadError
 from typing import List, Literal
+from urllib.parse import parse_qs, urlparse
 
 from requests.exceptions import RequestException
 
@@ -87,10 +88,16 @@ class KemonoDL:
                     f.write(archive_data + "\n")
 
     def parse_url(self, url) -> dict | None:
-        match = re.match(KemonoDL.URL_PARSE_PATTERN, url)
+        parsed = urlparse(url)
+        url_without_query = parsed._replace(query="", fragment="").geturl()
+        match = re.match(KemonoDL.URL_PARSE_PATTERN, url_without_query)
         if match:
             site, service, creator_id, post_id = match.groups()
-            return {"site": site, "service": service, "creator_id": creator_id, "post_id": post_id}
+            parsed_url = {"site": site, "service": service, "creator_id": creator_id, "post_id": post_id}
+            search_query = parse_qs(parsed.query).get("q", [None])[0]
+            if search_query:
+                parsed_url["search_query"] = search_query
+            return parsed_url
         return None
 
     def load_cookies(self, cookies_file: str) -> bool:
@@ -144,10 +151,20 @@ class KemonoDL:
             print(f"[Error] Failed to fetch creator profile from {url!r}: {e}")
             return None
 
-    def get_creator_post_ids(self, domain: str, service: str, creator_id: str, offset: int = 0) -> list[str]:
+    def get_creator_post_ids(
+        self,
+        domain: str,
+        service: str,
+        creator_id: str,
+        offset: int = 0,
+        search_query: str | None = None,
+    ) -> list[str]:
         try:
             url = f"{domain}/api/v1/{service}/user/{creator_id}/posts"
-            response = self.session.get(url, params={"o": offset}, headers={"accept": "text/css"})
+            params = {"o": offset}
+            if search_query:
+                params["q"] = search_query
+            response = self.session.get(url, params=params, headers={"accept": "text/css"})
             response.raise_for_status()
             posts = response.json()
             return [post.get("id") for post in posts]
@@ -155,10 +172,18 @@ class KemonoDL:
             print(f"[Error] Failed to fetch posts from {url!r}: {e}")
             return []
 
-    def get_all_creator_post_ids(self, domain: str, service: str, creator_id: str, limit: int = 0, offset: int = 0) -> list[str]:
+    def get_all_creator_post_ids(
+        self,
+        domain: str,
+        service: str,
+        creator_id: str,
+        limit: int = 0,
+        offset: int = 0,
+        search_query: str | None = None,
+    ) -> list[str]:
         posts = []
         while True:
-            posts_chunk = self.get_creator_post_ids(domain, service, creator_id, offset)
+            posts_chunk = self.get_creator_post_ids(domain, service, creator_id, offset, search_query)
             posts += posts_chunk
             if len(posts) >= limit and limit > 0:
                 posts = posts[:limit]
@@ -238,7 +263,12 @@ class KemonoDL:
         if parsed_url["post_id"]:
             self.download_post(domain, parsed_url["service"], parsed_url["creator_id"], parsed_url["post_id"])
         else:
-            post_ids = self.get_all_creator_post_ids(domain, parsed_url["service"], parsed_url["creator_id"])
+            post_ids = self.get_all_creator_post_ids(
+                domain,
+                parsed_url["service"],
+                parsed_url["creator_id"],
+                search_query=parsed_url.get("search_query"),
+            )
             for post_id in post_ids:
                 time.sleep(0.5)
                 self.download_post(domain, parsed_url["service"], parsed_url["creator_id"], post_id)
