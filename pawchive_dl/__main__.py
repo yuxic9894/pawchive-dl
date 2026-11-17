@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument("URL", nargs="*", help="URL(s) to download")
     # Output
     parser.add_argument("--path", type=str, default=os.getcwd(), help="Download directory path")
-    parser.add_argument("--output", type=str, action="append", metavar="[Type:]Template", default=[PawchiveDL.DEFAULT_OUTPUT_TEMPLATE], help="Post attachments output filename template")
+    parser.add_argument("--output", type=str, action="append", metavar="[Type:]Template", help="Output filename template")
     parser.add_argument("--restrict-names", action="store_true", help="Restrict output file to ASCII characters.")
     parser.add_argument("--custom-template-variables", type=str, help="Path to a json file with your custom template variables")
     parser.add_argument("--no-tmp", action="store_true", help="Do not use .tmp files. Write directly into the output file.")
@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("--skip-attachments", action="store_true", help="Skip downloading post attachments.")
     parser.add_argument("--write-content", action="store_true", help="Write Post content to an html file.")
     parser.add_argument("--write-json", action="store_true", help="Write Post api json response to an json file.")
+    parser.add_argument("--write-links", action="store_true", help="Extract post body links into a per-creator Markdown file.")
 
     return parser.parse_args()
 
@@ -46,6 +47,33 @@ def parse_value_type(s):
         elif char == ":" and inside_braces == 0:
             return [s[:i], s[i + 1 :]]
     return [None, s]
+
+
+def build_output_templates(outputs: list[str] | None) -> dict[str, str]:
+    templates = {
+        "attachments": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
+        "content": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
+        "json": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
+        "links": PawchiveDL.DEFAULT_LINKS_OUTPUT_TEMPLATE,
+    }
+    explicit_links_template = None
+
+    for output in outputs or []:
+        output_type, output_value = parse_value_type(output)
+        if output_type not in templates and output_type is not None:
+            print(f"[Error] Invalid output Type {output_type!r} for {output!r}")
+            sys.exit()
+        if output_type is None:
+            for key in templates:
+                templates[key] = output_value
+        else:
+            templates[output_type] = output_value
+            if output_type == "links":
+                explicit_links_template = output_value
+
+    if explicit_links_template is not None:
+        templates["links"] = explicit_links_template
+    return templates
 
 
 def main() -> None:
@@ -92,23 +120,7 @@ def main() -> None:
     if args.skip_extensions:
         attachment_filters["skip_extensions"] = [ext.strip() for ext in args.skip_extensions.split(",")]
 
-    output_templates = {
-        "attachments": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
-        "content": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
-        "json": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
-    }
-
-    if args.output:
-        for output in args.output:
-            output_type, output_value = parse_value_type(output)
-            if output_type not in output_templates and output_type is not None:
-                print(f"[Error] Invalid output Type {output_type!r} for {output!r}")
-                sys.exit()
-            if output_type is None:
-                for key in output_templates:
-                    output_templates[key] = output_value  # type: ignore
-            else:
-                output_templates[output_type] = output_value  # type: ignore
+    output_templates = build_output_templates(args.output)
 
     pawchive_dl = PawchiveDL(
         path=args.path,
@@ -121,6 +133,7 @@ def main() -> None:
         skip_attachments=args.skip_attachments,
         write_content=args.write_content,
         write_json=args.write_json,
+        write_links=args.write_links,
         no_tmp=args.no_tmp,
     )
 

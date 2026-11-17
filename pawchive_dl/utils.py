@@ -1,5 +1,6 @@
 import hashlib
 import re
+from pathlib import Path
 
 from requests import Session
 

@@ -12,6 +12,7 @@ from requests.exceptions import RequestException
 
 from .downloader import download_file
 from .models import Attachment, Creator, FavoriteCreator, FileTemplateVariables, Post
+from .links import extract_links, update_links_file
 from .session import CustomSession
 from .utils import compute_sha256, generate_file_path, get_sha256_hash
 
@@ -26,6 +27,7 @@ class PawchiveDL:
     POST_STEP_SIZE = 50
     URL_PARSE_PATTERN = r"^https://pawchive\.pw/([^/]+)/user/([^/]+)(?:/post/([^/]+))?$"
     DEFAULT_OUTPUT_TEMPLATE = "{service}/{creator_id}/{post_id}/{filename}"
+    DEFAULT_LINKS_OUTPUT_TEMPLATE = "{service}/{creator_id}/links.md"
 
     def __init__(
         self,
@@ -34,6 +36,7 @@ class PawchiveDL:
             "attachments": DEFAULT_OUTPUT_TEMPLATE,
             "content": DEFAULT_OUTPUT_TEMPLATE,
             "json": DEFAULT_OUTPUT_TEMPLATE,
+            "links": DEFAULT_LINKS_OUTPUT_TEMPLATE,
         },
         restrict_names: bool = False,
         custom_template_variables: dict = {},
@@ -45,6 +48,7 @@ class PawchiveDL:
         skip_attachments: bool = False,
         write_content: bool = False,
         write_json: bool = False,
+        write_links: bool = False,
         no_tmp: bool = False,
     ) -> None:
         self.session = CustomSession()
@@ -60,6 +64,7 @@ class PawchiveDL:
         self.skip_attachments = skip_attachments
         self.write_content = write_content
         self.write_json = write_json
+        self.write_links = write_links
         self.no_tmp = no_tmp
 
         self.archive_file = archive_file
@@ -253,6 +258,13 @@ class PawchiveDL:
             return
 
         post_errors = 0
+        if self.write_links:
+            try:
+                self.write_post_links(creator, post)
+            except Exception as e:
+                # Keep any previous index intact if extraction or file update fails.
+                print(f"[Error] Failed to update post links: {e}")
+                post_errors += 1
 
         if self.write_json:
             try:
@@ -275,6 +287,26 @@ class PawchiveDL:
 
         if post_errors == 0:
             self.write_archive_file(post.service, post.user, post.id)
+
+    def write_post_links(self, creator: Creator, post: Post) -> None:
+        post_url = f"{PawchiveDL.DOMAIN}/{post.service}/user/{creator.id}/post/{post.id}"
+        links = extract_links(post.content, post_url)
+        template_variables = FileTemplateVariables(creator, post, Attachment(name="links.md", path="links.md"))
+        file_path = generate_file_path(
+            self.path,
+            self.output_templates.get("links", self.DEFAULT_LINKS_OUTPUT_TEMPLATE),
+            template_variables.to_dict(self.custom_template_variables),
+            self.restrict_names,
+        )
+        update_links_file(
+            file_path,
+            service=post.service,
+            creator_id=creator.id,
+            post_id=post.id,
+            title=post.title,
+            original_url=post_url,
+            links=links,
+        )
 
     def download_post_attachments(self, creator: Creator, post: Post):
         if not post.attachments:

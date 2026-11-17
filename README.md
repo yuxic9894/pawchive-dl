@@ -44,6 +44,7 @@ pawchive-dl "https://pawchive.pw/SERVICE/user/CREATOR_ID/post/POST_ID"
 | `--skip-attachments` | 不下载帖子附件 |
 | `--write-content` | 将帖子正文保存为 HTML 文件 |
 | `--write-json` | 将帖子 API 响应保存为 JSON 文件 |
+| `--write-links` | 提取正文中的 HTTP/HTTPS 链接，汇总保存为 Markdown 文件 |
 | `--custom-template-variables FILE` | 从 JSON 文件加载自定义模板变量 |
 | `--restrict-names` | 将输出文件名限制为 ASCII 字符 |
 | `--no-tmp` | 直接写入目标文件，不使用 `.tmp` 临时文件 |
@@ -65,7 +66,35 @@ pawchive-dl --path ~/Downloads/Pawchive \
 
 ## 输出模板
 
-模板类型为 `attachments`、`content` 和 `json`。不写类型时，模板会应用于全部类型。日期可以用 `strftime` 格式化，例如 `{published:%Y%m%d}`。
+模板类型为 `attachments`、`content`、`json` 和 `links`。不写类型时，模板会应用于全部类型；明确指定类型的模板优先于通用模板。日期可以用 `strftime` 格式化，例如 `{published:%Y%m%d}`。
+
+## 提取帖子正文链接
+
+启用 `--write-links` 后，程序会从已获取的帖子正文 HTML 中提取 HTTP/HTTPS 超链接，并写入 Markdown 文件，不会额外请求帖子网页。同一创作者的帖子共用一个链接文件；每篇帖子以标题、Post ID、原帖 URL 和链接列表组成独立区块。重复处理同一帖子会更新原区块；成功解析出空链接时会移除该帖区块。
+
+未设置 `--output` 时，默认路径为 `{service}/{creator_id}/links.md`：
+
+```bash
+pawchive-dl --path ~/Downloads/Pawchive --write-links \\
+  "https://pawchive.pw/fanbox/user/73132618/post/123456"
+```
+
+如已设置通用 `--output`，链接文件会沿用它的目录模板，并用 `links.md` 作为 `{filename}`：
+
+```bash
+pawchive-dl --path ~/Downloads/Pawchive \\
+  --output "{creator_name}/{filename}" \\
+  --write-links "https://pawchive.pw/fanbox/user/73132618/post/123456"
+```
+
+也可以用 `links:` 单独指定链接文件路径；它优先于通用 `--output`：
+
+```bash
+pawchive-dl --path ~/Downloads/Pawchive \\
+  --output "{creator_name}/{filename}" \\
+  --output "links:{creator_name}/external-links.md" \\
+  --write-links "https://pawchive.pw/fanbox/user/73132618/post/123456"
+```
 
 常用变量包括 `{service}`、`{creator_id}`、`{creator_name}`、`{post_id}`、`{post_title}`、`{filename}`、`{file_name}`、`{file_ext}`、`{server_filename}`、`{sha256}`、`{added}`、`{published}`、`{edited}`、`{index}` 和 `{attachments_count}`。
 
@@ -108,3 +137,5 @@ pawchive-dl --path ~/Downloads/Pawchive \
   "https://pawchive.pw/patreon/user/2963401/post/161896325" \
   "https://pawchive.pw/patreon/user/2963401/post/162251503"
 ```
+
+pawchive-dl --path ~/Downloads/Pawchive --output "{creator_name}/{filename}" --skip-extensions "png,PNG,jpeg,jpg,gif,zip,mp4" --write-links https://pawchive.pw/patreon/user/3295915
