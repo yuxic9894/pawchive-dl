@@ -1,6 +1,5 @@
 import hashlib
 import re
-from pathlib import Path
 
 from requests import Session
 
@@ -24,15 +23,6 @@ def format_bytes(size) -> str:
             return f"{size:.2f} {unit}"
         size /= 1024.0
     return f"{size:.2f} TiB"
-
-
-def get_sha256_url_content(session: Session, url: str, chunk_size: int = 8192):
-    sha256 = hashlib.sha256()
-    with session.get(url, stream=True) as response:
-        for chunk in response.iter_content(chunk_size=chunk_size):
-            if chunk:
-                sha256.update(chunk)
-    return sha256.hexdigest()
 
 
 def generate_file_path(

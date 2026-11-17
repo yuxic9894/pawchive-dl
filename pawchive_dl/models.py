@@ -22,18 +22,6 @@ class Creator:
     id: str
     name: str
     service: str
-    indexed: int
-    updated: int
-    public_id: str
-    relation_id: str | None
-    post_count: int | None = None
-    dm_count: int | None = None
-    share_count: int | None = None
-    chat_count: int | None = None
-    has_chats: bool | None = None
-    ever_imported: bool | None = None
-    kemono_favorited: int | None = None
-    import_size_cap_gb: int | None = None
 
 
 @ignore_extra_kwargs
@@ -42,16 +30,6 @@ class FavoriteCreator:
     id: str
     name: str
     service: str
-    indexed: str
-    updated: str
-    public_id: int | None
-    relation_id: int | None
-    faved_seq: int
-    last_imported: str
-    has_chats: bool | None = None
-    ever_imported: bool | None = None
-    kemono_favorited: int | None = None
-    import_size_cap_gb: int | None = None
 
 
 @ignore_extra_kwargs
@@ -60,7 +38,6 @@ class Attachment:
     name: str
     path: str
     index: int = 0
-    server: str | None = None
 
 
 @ignore_extra_kwargs
@@ -121,7 +98,7 @@ class Post:
 
         file = post.get("file", None)
         if file is not None:
-            file_name = file.get("name", findNameFromPath(attachments, previews, file.get("path")))
+            file_name = file.get("name", find_name_from_path(attachments, previews, file.get("path")))
             file_path = file.get("path", None)
             if file and file_name and file_path:
                 self.attachments.append(
@@ -129,12 +106,11 @@ class Post:
                         name=file_name,
                         path=file_path,
                         index=len(self.attachments),
-                        server=findSeverFromPath(attachments, previews, file_path),
                     )
                 )
 
         for a in post.get("attachments", []):
-            a_name = a.get("name", findNameFromPath(attachments, previews, a.get("path")))
+            a_name = a.get("name", find_name_from_path(attachments, previews, a.get("path")))
             a_path = a.get("path", None)
             if a and a_name and a_path:
                 self.attachments.append(
@@ -142,7 +118,6 @@ class Post:
                         name=a_name,
                         path=a_path,
                         index=len(self.attachments),
-                        server=findSeverFromPath(attachments, previews, a_path),
                     )
                 )
 
@@ -150,17 +125,7 @@ class Post:
         self.tags = post.get("tags", None)
 
 
-def findSeverFromPath(attachments, previews, path):
-    for attachment in attachments:
-        if attachment.get("path") == path:
-            return attachment.get("server")
-    for preview in previews:
-        if preview.get("path") == path:
-            return preview.get("server")
-    return None
-
-
-def findNameFromPath(attachments, previews, path):
+def find_name_from_path(attachments, previews, path):
     for attachment in attachments:
         if attachment.get("path") == path:
             return attachment.get("name")
@@ -172,7 +137,7 @@ def findNameFromPath(attachments, previews, path):
 
 @ignore_extra_kwargs
 @dataclass
-class FileTemplateVaribales:
+class FileTemplateVariables:
     service: str
     creator_id: str
     creator_name: str
@@ -219,7 +184,7 @@ class FileTemplateVaribales:
         self.sha256 = sha256
         self.index = index
 
-    def toDict(self, custom_variables: dict | None = None) -> dict[str, str]:
+    def to_dict(self, custom_variables: dict | None = None) -> dict[str, str]:
         template_variables_dict = asdict(self)
 
         if custom_variables:

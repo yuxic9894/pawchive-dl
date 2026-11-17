@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "kemono-dl"
-version = "2025.09.14"
-description = "A simple downloader for kemono/coomer using Python."
+name = "pawchive-dl"
+version = "2026.08.10"
+description = "A simple downloader for Pawchive using Python."
 authors = [
   { name="AlphaSlayer1964" }
 ]
@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["kemono_dl"]
+include = ["pawchive_dl"]
 
 [project.scripts]
-kemono-dl = "kemono_dl.__main__:main"
+pawchive-dl = "pawchive_dl.__main__:main"

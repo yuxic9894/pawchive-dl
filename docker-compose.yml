@@ -1,10 +1,10 @@
 services:
-  kemono-dl:
+  pawchive-dl:
     build: 
       context: .          
       dockerfile: Dockerfile
-    image: alphaslayer1964/kemono-dl:latest
-    container_name: kemono-dl
+    image: pawchive-dl:latest
+    container_name: pawchive-dl
     volumes:
       - ./downloads:/media
     # - ./appdata:/appdata # Uncomment to mount a local 'appdata' folder for passing cookies/batch files

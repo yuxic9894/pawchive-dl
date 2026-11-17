@@ -4,28 +4,22 @@ import os
 import sys
 from datetime import datetime
 
-from .kemono_dl import KemonoDL
+from .client import PawchiveDL
 from .version import __version__
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="KemonoDL Downloader")
+    parser = argparse.ArgumentParser(description="Pawchive downloader")
     # General
     parser.add_argument("--version", action="store_true", help="Print program version and exit")
-    parser.add_argument("--cookies", type=str, action="append", help="Path(s) to cookies files")
-    parser.add_argument("--coomer-login", nargs=2, metavar=("USERNAME", "PASSWORD"), help="Login for Coomer")
-    parser.add_argument("--kemono-login", nargs=2, metavar=("USERNAME", "PASSWORD"), help="Login for Kemono")
-    parser.add_argument("--pawchive-login", nargs=2, metavar=("USERNAME", "PASSWORD"), help="Login for Pawchive")
-    parser.add_argument("--favorite-creators-coomer", action="store_true", help="Download favorite creators from Coomer")
-    parser.add_argument("--favorite-creators-kemono", action="store_true", help="Download favorite creators from Kemono")
-    parser.add_argument("--favorite-creators-pawchive", action="store_true", help="Download favorite creators from Pawchive")
-    # parser.add_argument("--favorite-posts-coomer", action="store_true", help="Download favorite posts from Coomer")
-    # parser.add_argument("--favorite-posts-kemono", action="store_true", help="Download favorite posts from Kemono")
+    parser.add_argument("--cookies", type=str, action="append", help="Path(s) to Pawchive cookies files")
+    parser.add_argument("--pawchive-login", nargs=2, metavar=("USERNAME", "PASSWORD"), help="Log in to Pawchive")
+    parser.add_argument("--favorite-creators-pawchive", action="store_true", help="Download Pawchive favorite creators")
     parser.add_argument("--batch-file", type=str, action="append", help="Download URLs from a file")
     parser.add_argument("URL", nargs="*", help="URL(s) to download")
     # Output
     parser.add_argument("--path", type=str, default=os.getcwd(), help="Download directory path")
-    parser.add_argument("--output", type=str, action="append", metavar="[Type:]Template", default=[KemonoDL.DEFAULT_OUTPUT_TEMPLATE], help="Post attachments output filename tamplate")
+    parser.add_argument("--output", type=str, action="append", metavar="[Type:]Template", default=[PawchiveDL.DEFAULT_OUTPUT_TEMPLATE], help="Post attachments output filename template")
     parser.add_argument("--restrict-names", action="store_true", help="Restrict output file to ASCII characters.")
     parser.add_argument("--custom-template-variables", type=str, help="Path to a json file with your custom template variables")
     parser.add_argument("--no-tmp", action="store_true", help="Do not use .tmp files. Write directly into the output file.")
@@ -99,11 +93,9 @@ def main() -> None:
         attachment_filters["skip_extensions"] = [ext.strip() for ext in args.skip_extensions.split(",")]
 
     output_templates = {
-        "attachments": KemonoDL.DEFAULT_OUTPUT_TEMPLATE,
-        # "pfp": KemonoDL.DEFAULT_OUTPUT_TEMPLATE,
-        # "banner": KemonoDL.DEFAULT_OUTPUT_TEMPLATE,
-        "content": KemonoDL.DEFAULT_OUTPUT_TEMPLATE,
-        "json": KemonoDL.DEFAULT_OUTPUT_TEMPLATE,
+        "attachments": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
+        "content": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
+        "json": PawchiveDL.DEFAULT_OUTPUT_TEMPLATE,
     }
 
     if args.output:
@@ -118,7 +110,7 @@ def main() -> None:
             else:
                 output_templates[output_type] = output_value  # type: ignore
 
-    kemono_dl = KemonoDL(
+    pawchive_dl = PawchiveDL(
         path=args.path,
         output_templates=output_templates,
         restrict_names=args.restrict_names,
@@ -134,32 +126,18 @@ def main() -> None:
 
     if args.cookies:
         for cookie_file in args.cookies:
-            kemono_dl.load_cookies(cookie_file)
-
-    if args.coomer_login:
-        kemono_dl.login(KemonoDL.COOMER_DOMAIN, args.coomer_login[0], args.coomer_login[1])
-        print(kemono_dl.isLoggedin(KemonoDL.COOMER_DOMAIN))
-
-    if args.kemono_login:
-        kemono_dl.login(KemonoDL.KEMONO_DOMAIN, args.kemono_login[0], args.kemono_login[1])
-        print(kemono_dl.isLoggedin(KemonoDL.KEMONO_DOMAIN))
+            pawchive_dl.load_cookies(cookie_file)
 
     if args.pawchive_login:
-        kemono_dl.login(KemonoDL.PAWCHIVE_DOMAIN, args.pawchive_login[0], args.pawchive_login[1])
-        print(kemono_dl.isLoggedin(KemonoDL.PAWCHIVE_DOMAIN))
-
-    if args.favorite_creators_coomer:
-        kemono_dl.download_favorite_creators(KemonoDL.COOMER_DOMAIN)
-
-    if args.favorite_creators_kemono:
-        kemono_dl.download_favorite_creators(KemonoDL.KEMONO_DOMAIN)
+        pawchive_dl.login(*args.pawchive_login)
+        print(pawchive_dl.is_logged_in())
 
     if args.favorite_creators_pawchive:
-        kemono_dl.download_favorite_creators(KemonoDL.PAWCHIVE_DOMAIN)
+        pawchive_dl.download_favorite_creators()
 
     if args.URL:
         for url in args.URL:
-            kemono_dl.download_url(url)
+            pawchive_dl.download_url(url)
 
     if args.batch_file:
         for batch_file in args.batch_file:
@@ -171,7 +149,7 @@ def main() -> None:
                 batch_urls = [line.strip() for line in f.readlines() if not line.startswith("#")]
 
             for url in batch_urls:
-                kemono_dl.download_url(url)
+                pawchive_dl.download_url(url)
 
     print("Complete")
 

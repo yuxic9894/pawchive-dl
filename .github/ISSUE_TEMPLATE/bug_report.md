@@ -11,7 +11,7 @@ labels: bug
 <!-- Before submitting please click "Preview" at the top to make sure everything is formatted properly. Thank you :) -->
 
 ### Version
-<!-- To get version run `python kemono-dl.py --version` -->
+<!-- To get version run `pawchive-dl --version` -->
 Version:
 
 ### Your Command
